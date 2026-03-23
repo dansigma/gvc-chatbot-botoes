@@ -58,7 +58,7 @@
     version: 'djE=',
     
     // Mensagem de boas-vindas (codificada)
-    welcomeMessage: 'TzhFbGFzISBTb3UgbyBHw6ksIGFzc2lzdGVudGUgdmnDqnJ0dWFsIGRlIHRyZWluYW1lbnRvIGRhIEdWQy4KUG9zc28gY2Fuc28gY2xpbmljYXIgY29tIGR1dmlkYXMgc29icmUgYHByb2NlZGltZW50b3NgLCBgcGVyYcOnw6Flc2AgZSBgb3JpZW50YWNpb2VzYCBkYSBlbXJ1c2EuClNvw6IgcXVhbCBhc3N1bnRlIHZvY8OpIG3DqWdhIHNhYmVyPwo='
+    welcomeMessage: '8J+RiyBPbMOhISBUZW0gYWxndW1hIGTDunZpZGEgc29icmUgcHJvY2VkaW1lbnRvcyBvdSBvcGVyYcOnw7VlcyBkYSBHVkM/IFBvZGUgcGVyZ3VudGFyIMOgIHZvbnRhZGUh'
   };
 
   // ═══════════════════════════════════════════════════════════════════════════

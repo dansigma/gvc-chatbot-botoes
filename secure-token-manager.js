@@ -401,13 +401,17 @@
      */
     getWelcomeMessage() {
       // Em produção, isso viria do backend
-      const decoded = decodeBase64(ENCODED_FALLBACK.welcomeMessage);
-      // Reverter encoding reverso para demonstração
-      return decoded
-        .split('')
-        .reverse()
-        .join('')
-        .replace(/\0/g, '');
+      try {
+        const binaryStr = atob(ENCODED_FALLBACK.welcomeMessage);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        bytes.reverse();
+        return new TextDecoder('utf-8').decode(bytes);
+      } catch (e) {
+        return '';
+      }
     },
 
     /**

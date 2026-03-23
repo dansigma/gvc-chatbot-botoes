@@ -56,7 +56,7 @@ A infraestrutura foi adaptada para rodar nativamente na Cloudflare Pages usando 
    - Configure em **Settings -> Environment variables** no seu projeto do Pages:
      - `SIGMACHAT_TOKEN`: 'seu-token-real'
      - `BACKEND_AUTH_TOKEN`: 'sua-chave-secreta'
-     - `SIGMACHAT_BASE_URL`: 'https://webhookdidactica.sigmalabs.com.br/webhook/gvc-chatbot'
+     - `SIGMACHAT_BASE_URL`: 'https://webhooklocal.sigmalabs.com.br/webhook/chatbot-test'
 
 #### Alternativa: Deploy via Wrangler CLI (Rápido)
 1. Instale o Wrangler: `npm install -g wrangler`

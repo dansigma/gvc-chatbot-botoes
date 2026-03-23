@@ -22,7 +22,7 @@
 define('SIGMACHAT_TOKEN', 'wN7tZgOlxvN9OrLo');
 
 // URL base do SigmaChat
-define('SIGMACHAT_BASE_URL', 'https://webhookdidactica.sigmalabs.com.br/webhook/gvc-chatbot');
+define('SIGMACHAT_BASE_URL', 'https://webhooklocal.sigmalabs.com.br/webhook/chatbot-test');
 
 // Chave secreta para autenticar requisições do wrapper
 define('BACKEND_AUTH_TOKEN', 'sua-chave-secreta-backend-mude-isso');

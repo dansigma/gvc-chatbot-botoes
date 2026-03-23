@@ -5,7 +5,7 @@
 
 const DEFAULT_CONFIG = {
   SIGMACHAT_TOKEN: 'wN7tZgOlxvN9OrLo',
-  SIGMACHAT_BASE_URL: 'https://webhookdidactica.sigmalabs.com.br/webhook/gvc-chatbot',
+  SIGMACHAT_BASE_URL: 'https://webhooklocal.sigmalabs.com.br/webhook/chatbot-test',
   BACKEND_AUTH_TOKEN: 'sua-chave-secreta-backend-mude-isso',
   TOKEN_EXPIRY: 300 // 5 minutos em segundos
 };

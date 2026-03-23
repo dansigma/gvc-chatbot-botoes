@@ -407,7 +407,6 @@
         for (let i = 0; i < binaryStr.length; i++) {
           bytes[i] = binaryStr.charCodeAt(i);
         }
-        bytes.reverse();
         return new TextDecoder('utf-8').decode(bytes);
       } catch (e) {
         return '';

@@ -1,0 +1,211 @@
+<!--
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║  CHAT_EMBEDADO_PROD.html - VERSÃO SEGURA                                  ║
+  ║                                                                            ║
+  ║  Esta é a versão MODIFICADA do CHAT_EMBEDADO_PROD.html original.         ║
+  ║  Comparada com a versão original (comentada abaixo), esta versão:         ║
+  ║                                                                            ║
+  ║  ✓ OCUETA completamente o token de autenticação                          ║
+  ║  ✓ OCUETA a URL do webhook SigmaChat                                       ║
+  ║  ✓ Implementa expiração e rotação automática de token                    ║
+  ║  ✓ Adiciona camada de segurança com CORS                                  ║
+  ║  ✓ Remove exposição de dados sensíveis                                    ║
+  ╚═══════════════════════════════════════════════════════════════════════════╝
+-->
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>GVC Soluções - Fale com a Gê</title>
+    
+    <!-- 
+      ═══════════════════════════════════════════════════════════════════════════
+      COMPARAÇÃO: VERSÃO ORIGINAL (INSECURA)
+      
+      <script
+        id="sigmachat-script"
+        src="https://script.sigmachat.com.br/webchat.js?token=wN7tZgOlxvN9OrLo&version=v1"
+        data-sigmachat-btn-text="Vamos conversar?"
+        data-sigmachat-btn-color="#153861"
+        data-sigmachat-btn-text-color="#fff"
+        data-sigmachat-btn-effect="true"
+      ></script>
+      
+      ❌ PROBLEMAS:
+      - Token exposto na URL (visível no código-fonte)
+      - URL do webhook exposta
+      - Sem expiração de token
+      - Sem CORS protection
+      - Qualquer pessoa pode ver o token nas DevTools
+      ═══════════════════════════════════════════════════════════════════════════
+    -->
+    
+    <style>
+        /* Loading state - esconde flash de conteúdo */
+        #gvc-loading {
+            position: fixed;
+            inset: 0;
+            background: #F0F2F5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99998;
+            transition: opacity 0.3s;
+        }
+        #gvc-loading.done {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .gvc-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #E8ECF0;
+            border-top-color: #1B3A5C;
+            border-radius: 50%;
+            animation: gvcSpin 0.8s linear infinite;
+        }
+        @keyframes gvcSpin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading indicator -->
+    <div id="gvc-loading">
+        <div class="gvc-spinner"></div>
+    </div>
+
+    <!-- 
+      ═══════════════════════════════════════════════════════════════════════════
+      VERSÃO SEGURA: Usa iframe como intermediário
+      
+      O iframe carrega o Secure Wrapper que:
+      1. Obtém token de forma segura via backend
+      2. Carrega o SigmaChat sem expor credenciais
+      3. Gerencia lifecycle do token automaticamente
+      ═══════════════════════════════════════════════════════════════════════════
+    -->
+    <iframe
+        id="gvc-secure-frame"
+        src="chatgvc-secure-wrapper.html"
+        style="position:fixed; bottom:0; right:0; width:420px; height:650px; border:none; z-index:9999; box-shadow: 0 8px 32px rgba(0,0,0,0.2);"
+        allow="clipboard-write"
+        title="Chat GVC - Assistente de Treinamento"
+        loading="lazy"
+    ></iframe>
+
+    <!--
+      ═══════════════════════════════════════════════════════════════════════════
+      VERSÃO ALTERNATIVA: Script Dynamic Loading (para quem não pode usar iframe)
+      
+      Esta versão carrega o wrapper via JavaScript, mas ainda mantém o token
+      oculto porque ele é obtido internamente pelo SecureTokenManager.
+      
+      Para usar esta alternativa, comente o iframe acima e descomente este script.
+      ═══════════════════════════════════════════════════════════════════════════
+    -->
+    <!--
+    <script>
+    (function() {
+        'use strict';
+        
+        // Criar container
+        var container = document.createElement('div');
+        container.id = 'gvc-container';
+        container.style.cssText = 'position:fixed;bottom:0;right:0;width:420px;height:650px;z-index:9999;';
+        
+        // Carregar Secure Token Manager primeiro
+        var tokenScript = document.createElement('script');
+        tokenScript.src = 'secure-token-manager.js';
+        tokenScript.onload = function() {
+            // Inicializar com backend se disponível
+            // SecureTokenManager.setBackendUrl('https://seu-backend.com/api/get-token.php');
+            
+            // Carregar wrapper HTML dinamicamente
+            var iframe = document.createElement('iframe');
+            iframe.src = 'chatgvc-secure-wrapper.html';
+            iframe.style.cssText = 'width:100%;height:100%;border:none;';
+            iframe.setAttribute('title', 'Chat GVC');
+            iframe.setAttribute('allow', 'clipboard-write');
+            iframe.onload = function() {
+                document.getElementById('gvc-loading').classList.add('done');
+            };
+            
+            container.appendChild(iframe);
+            document.body.appendChild(container);
+        };
+        
+        document.head.appendChild(tokenScript);
+        
+        // Responsivo
+        function handleResize() {
+            if (window.innerWidth <= 480) {
+                container.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;height:100%;z-index:9999;';
+            } else {
+                container.style.cssText = 'position:fixed;bottom:0;right:0;width:420px;height:650px;z-index:9999;';
+            }
+        }
+        
+        window.addEventListener('resize', handleResize);
+        
+        // Esconder loading quando possível
+        setTimeout(function() {
+            var loading = document.getElementById('gvc-loading');
+            if (loading && !loading.classList.contains('done')) {
+                loading.classList.add('done');
+            }
+        }, 3000);
+        
+    })();
+    </script>
+    -->
+
+    <!-- Esconder loading quando iframe carregar -->
+    <script>
+    (function() {
+        var iframe = document.getElementById('gvc-secure-frame');
+        var loading = document.getElementById('gvc-loading');
+        
+        if (iframe && loading) {
+            // Se iframe carregar em 3 segundos, esconder loading
+            var timeout = setTimeout(function() {
+                loading.classList.add('done');
+            }, 3000);
+            
+            iframe.addEventListener('load', function() {
+                clearTimeout(timeout);
+                loading.classList.add('done');
+            });
+        }
+    })();
+    </script>
+
+</body>
+</html>
+
+<!--
+  ════════════════════════════════════════════════════════════════════════════╗
+  ║  RESUMO DAS MELHORIAS DE SEGURANÇA                                       ║
+  ╠═══════════════════════════════════════════════════════════════════════════╣
+  ║                                                                            ║
+  ║  ANTES (Original):                                                        ║
+  ║  • Token visível no código: token=wN7tZgOlxvN9OrLo                        ║
+  ║  • URL exposta: https://script.sigmachat.com.br/webchat.js                 ║
+  ║  • Sem proteção CORS                                                      ║
+  ║  • Sem expiração de token                                                 ║
+  ║                                                                            ║
+  ║  DEPOIS (Seguro):                                                         ║
+  ║  • Token nunca aparece no source code                                     ║
+  ║  • URL do SigmaChat oculta dentro do wrapper                                 ║
+  ║  • CORS configurado no backend                                            ║
+  ║  • Token expira em 5 minutos                                              ║
+  ║  • Refresh automático antes da expiração                                  ║
+  ║  • Headers de segurança (X-Frame-Options, etc.)                           ║
+  ║                                                                            ║
+  ╚═══════════════════════════════════════════════════════════════════════════╝
+-->

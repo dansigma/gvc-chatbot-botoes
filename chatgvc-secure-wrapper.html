@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>ChatGVC - Secure Session</title>
+  
+  <!-- 
+    ╔═══════════════════════════════════════════════════════════════════════════╗
+    ║  ChatGVC Secure Wrapper                                                     ║
+    ║  Esta página age como intermediária segura para o chatbot Gê              ║
+    ║  Nenhuma informação sensível é exposta no código-fonte                      ║
+    ╚═══════════════════════════════════════════════════════════════════════════╝
+  -->
+
+  <style>
+    :root {
+      --gvc-primary: #1B3A5C;
+      --gvc-primary-light: #24507A;
+      --gvc-primary-dark: #122840;
+      --gvc-accent: #2E86C1;
+      --gvc-green: #27AE60;
+      --gvc-bg: #F0F2F5;
+      --gvc-white: #FFFFFF;
+      --gvc-gray-light: #E8ECF0;
+      --gvc-gray: #8B95A1;
+      --gvc-text: #2C3E50;
+      --gvc-shadow: 0 8px 32px rgba(27, 58, 92, 0.25);
+      --gvc-shadow-sm: 0 2px 8px rgba(0,0,0,0.1);
+      --gvc-radius: 16px;
+      --gvc-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--gvc-bg);
+    }
+
+    /* Loading screen */
+    #gvc-loader {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--gvc-bg);
+      z-index: 99999;
+      transition: opacity 0.4s ease;
+    }
+    #gvc-loader.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .gvc-loader-spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--gvc-gray-light);
+      border-top-color: var(--gvc-primary);
+      border-radius: 50%;
+      animation: gvcSpin 0.8s linear infinite;
+    }
+    @keyframes gvcSpin {
+      to { transform: rotate(360deg); }
+    }
+    .gvc-loader-text {
+      margin-top: 16px;
+      color: var(--gvc-gray);
+      font-size: 14px;
+    }
+
+    /* ══ BOTÃO FLUTUANTE ══ */
+    #chat-toggle {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gvc-primary), var(--gvc-primary-light));
+      color: var(--gvc-white);
+      border: none;
+      cursor: pointer;
+      font-size: 28px;
+      box-shadow: var(--gvc-shadow);
+      z-index: 10000;
+      transition: var(--gvc-transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #chat-toggle:hover { transform: scale(1.08); }
+    #chat-toggle .icon-chat,
+    #chat-toggle .icon-close { position: absolute; transition: var(--gvc-transition); }
+    #chat-toggle .icon-close { opacity: 0; transform: rotate(-90deg); }
+    #chat-toggle.active .icon-chat { opacity: 0; transform: rotate(90deg); }
+    #chat-toggle.active .icon-close { opacity: 1; transform: rotate(0deg); }
+
+    /* ══ WIDGET ══ */
+    #chat-widget {
+      position: fixed;
+      bottom: 100px;
+      right: 24px;
+      width: 420px;
+      height: 600px;
+      max-height: calc(100vh - 130px);
+      border-radius: var(--gvc-radius);
+      overflow: hidden;
+      box-shadow: var(--gvc-shadow);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      background: var(--gvc-white);
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+      pointer-events: none;
+      transition: var(--gvc-transition);
+    }
+    #chat-widget.open {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: all;
+    }
+
+    @media (max-width: 480px) {
+      #chat-widget {
+        width: 100vw; height: 100vh; max-height: 100vh;
+        bottom: 0; right: 0; border-radius: 0;
+      }
+    }
+
+    /* ══ HEADER ══ */
+    .chat-header {
+      background: linear-gradient(135deg, var(--gvc-primary-dark), var(--gvc-primary));
+      color: var(--gvc-white);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+    .chat-header-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--gvc-white);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; position: relative; flex-shrink: 0;
+      overflow: hidden;
+    }
+    .chat-header-avatar img {
+      width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+    }
+    .avatar-status {
+      position: absolute; bottom: 0; right: 0;
+      width: 12px; height: 12px; background: var(--gvc-green);
+      border-radius: 50%; border: 2px solid var(--gvc-primary);
+    }
+    .chat-header-info { flex: 1; }
+    .chat-header-title { font-size: 17px; font-weight: 700; }
+    .chat-header-subtitle { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+    .header-btn {
+      background: rgba(255,255,255,0.15); border: none; color: var(--gvc-white);
+      width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+      font-size: 16px; display: flex; align-items: center; justify-content: center;
+      transition: var(--gvc-transition);
+    }
+    .header-btn:hover { background: rgba(255,255,255,0.25); }
+
+    /* ══ MENSAGENS ══ */
+    .chat-messages {
+      flex: 1; overflow-y: auto; padding: 20px 16px;
+      background: var(--gvc-bg);
+      display: flex; flex-direction: column; gap: 4px;
+      scroll-behavior: smooth;
+    }
+    .chat-messages::-webkit-scrollbar { width: 6px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--gvc-gray); border-radius: 3px; }
+
+    .msg-wrapper {
+      display: flex; align-items: flex-end; gap: 8px;
+      max-width: 85%; animation: msgIn 0.3s ease-out;
+    }
+    .msg-wrapper.bot { align-self: flex-start; }
+    .msg-wrapper.user { align-self: flex-end; flex-direction: row-reverse; }
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--gvc-primary); color: var(--gvc-white);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0; overflow: hidden;
+    }
+    .msg-avatar img {
+      width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+    }
+    .msg-wrapper.user .msg-avatar { background: var(--gvc-accent); }
+
+    .msg-bubble {
+      padding: 10px 16px; border-radius: 12px;
+      font-size: 14px; line-height: 1.6; word-wrap: break-word;
+    }
+    .msg-wrapper.bot .msg-bubble {
+      background: var(--gvc-white); color: var(--gvc-text);
+      border-bottom-left-radius: 4px; box-shadow: var(--gvc-shadow-sm);
+    }
+    .msg-wrapper.user .msg-bubble {
+      background: linear-gradient(135deg, var(--gvc-primary), var(--gvc-primary-light));
+      color: var(--gvc-white); border-bottom-right-radius: 4px;
+    }
+    .msg-time {
+      font-size: 10px; color: var(--gvc-gray); margin-top: 4px;
+    }
+    .msg-wrapper.bot .msg-time { text-align: left; }
+    .msg-wrapper.user .msg-time { text-align: right; }
+
+    .msg-bubble strong { font-weight: 600; }
+    .msg-bubble a { color: var(--gvc-accent); }
+    .msg-wrapper.user .msg-bubble a { color: #AED6F1; }
+
+    /* Typing */
+    .typing-indicator { display: flex; gap: 4px; padding: 4px 0; }
+    .typing-indicator span {
+      width: 8px; height: 8px; background: var(--gvc-gray);
+      border-radius: 50%; animation: typing 1.4s infinite;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* ══ INPUT ══ */
+    .chat-input-area {
+      display: flex; align-items: center; padding: 12px 16px;
+      background: var(--gvc-white); border-top: 1px solid var(--gvc-gray-light);
+      gap: 10px; flex-shrink: 0;
+    }
+    .chat-input-area input {
+      flex: 1; padding: 12px 18px;
+      border: 2px solid var(--gvc-gray-light); border-radius: 24px;
+      font-size: 14px; outline: none; color: var(--gvc-text);
+      font-family: inherit; transition: var(--gvc-transition);
+    }
+    .chat-input-area input::placeholder { color: var(--gvc-gray); }
+    .chat-input-area input:focus { border-color: var(--gvc-accent); }
+    .chat-input-area input:disabled { background: var(--gvc-gray-light); cursor: not-allowed; }
+
+    .send-btn {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--gvc-primary), var(--gvc-primary-light));
+      color: var(--gvc-white); border: none; cursor: pointer;
+      font-size: 18px; display: flex; align-items: center; justify-content: center;
+      transition: var(--gvc-transition); flex-shrink: 0;
+    }
+    .send-btn:hover:not(:disabled) { transform: scale(1.05); }
+    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ══ FOOTER ══ */
+    .chat-footer {
+      text-align: center; padding: 6px; font-size: 10px;
+      color: var(--gvc-gray); background: var(--gvc-white);
+      border-top: 1px solid var(--gvc-gray-light); flex-shrink: 0;
+    }
+    .chat-footer a { color: var(--gvc-accent); text-decoration: none; }
+
+    /* Error state */
+    .chat-error {
+      padding: 12px 16px;
+      background: #FEF3E2;
+      color: #856404;
+      font-size: 13px;
+      text-align: center;
+      border-bottom: 1px solid #FFEeba;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading Screen -->
+  <div id="gvc-loader">
+    <div class="gvc-loader-spinner"></div>
+    <div class="gvc-loader-text">Iniciando sessão segura...</div>
+  </div>
+
+  <!-- BOTÃO FLUTUANTE -->
+  <button id="chat-toggle" aria-label="Abrir chat">
+    <span class="icon-chat">💬</span>
+    <span class="icon-close">✕</span>
+  </button>
+
+  <!-- WIDGET -->
+  <div id="chat-widget">
+    <div class="chat-header">
+      <div class="chat-header-avatar">
+        <img src="ge-avatar.png" alt="Gê" onerror="this.parentElement.innerHTML='🤖'+this.parentElement.querySelector('.avatar-status')?.outerHTML||''">
+        <div class="avatar-status"></div>
+      </div>
+      <div class="chat-header-info">
+        <div class="chat-header-title">ChatGVC</div>
+        <div class="chat-header-subtitle">Assistente de Treinamento · Online</div>
+      </div>
+      <button class="header-btn" id="btn-reset" title="Nova conversa">🔄</button>
+      <button class="header-btn" id="btn-minimize" title="Minimizar">─</button>
+    </div>
+
+    <div id="chat-error" class="chat-error" style="display: none;"></div>
+
+    <div class="chat-messages" id="messages"></div>
+
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Digite sua pergunta..." autocomplete="off">
+      <button class="send-btn" id="send-btn">➤</button>
+    </div>
+
+    <div class="chat-footer">
+      Powered by <a href="https://didactica.com.br" target="_blank">Didactica</a> · GVC
+    </div>
+  </div>
+
+  <!-- 
+    Secure Token Manager - Carrega configurações de forma segura
+    O token real NUNCA aparece no código fonte
+  -->
+  <script src="secure-token-manager.js"></script>
+
+  <!-- 
+    Secure Chat Application
+    Toda a lógica de comunicação usa o token seguro
+  -->
+  <script>
+  (function() {
+    'use strict';
+
+    // ══════════════════════════════════════════════════════════════
+    // CONFIGURAÇÃO (obtida de forma segura via token manager)
+    // ══════════════════════════════════════════════════════════════
+    
+    const CONFIG = {
+      welcomeMessage: SecureTokenManager.getWelcomeMessage(),
+      sessionKey: 'gvc_secure_session',
+      historyKey: 'gvc_secure_history',
+      maxHistory: 100,
+      requestTimeout: 60000,
+      tokenRefreshInterval: 300000, // 5 minutos
+      maxRetries: 3,
+      retryDelay: 2000,
+    };
+
+    // Estado
+    let isOpen = false;
+    let isWaiting = false;
+    let sessionId = null;
+    let currentToken = null;
+    let tokenExpiresAt = 0;
+
+    const $ = (sel) => document.querySelector(sel);
+
+    // ─── Session Management ───
+    function getSessionId() {
+      let id = sessionStorage.getItem(CONFIG.sessionKey);
+      if (!id) {
+        id = 'gvc-' + Date.now() + '-' + generateRandomId();
+        sessionStorage.setItem(CONFIG.sessionKey, id);
+      }
+      return id;
+    }
+
+    function generateRandomId() {
+      const array = new Uint8Array(8);
+      crypto.getRandomValues(array);
+      return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // ─── Secure Token Management ───
+    async function initializeSecureSession() {
+      try {
+        const tokenData = await SecureTokenManager.getToken();
+        currentToken = tokenData.token;
+        tokenExpiresAt = Date.now() + (tokenData.expiresIn * 1000);
+        
+        // Agendar refresh do token
+        scheduleTokenRefresh();
+        
+        return true;
+      } catch (error) {
+        console.error('[GVC-Secure] Falha ao inicializar sessão:', error);
+        showError('Não foi possível conectar ao assistente. Tente novamente.');
+        return false;
+      }
+    }
+
+    function scheduleTokenRefresh() {
+      // Refresh 30 segundos antes de expirar
+      const refreshTime = Math.max(tokenExpiresAt - Date.now() - 30000, 60000);
+      setTimeout(refreshToken, refreshTime);
+    }
+
+    async function refreshToken() {
+      try {
+        const tokenData = await SecureTokenManager.refreshToken(currentToken);
+        currentToken = tokenData.token;
+        tokenExpiresAt = Date.now() + (tokenData.expiresIn * 1000);
+        scheduleTokenRefresh();
+      } catch (error) {
+        console.error('[GVC-Secure] Falha ao renovaro token:', error);
+        // Não afeta a sessão atual, apenas agendar retry
+        setTimeout(refreshToken, CONFIG.retryDelay);
+      }
+    }
+
+    function isTokenValid() {
+      return currentToken && Date.now() < tokenExpiresAt - 10000;
+    }
+
+    // ─── Error Display ───
+    function showError(message) {
+      const errorEl = $('#chat-error');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      setTimeout(() => { errorEl.style.display = 'none'; }, 10000);
+    }
+
+    function clearError() {
+      const errorEl = $('#chat-error');
+      errorEl.style.display = 'none';
+    }
+
+    // ─── Markdown Parser ───
+    function renderMarkdown(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+        .replace(/(^|[^"=])(https?:\/\/\S+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>')
+        .replace(/^(\d+)[.)]\s+(.+)$/gm, '<li value="$1">$2</li>')
+        .replace(/((?:<li.*?<\/li>\n?)+)/g, '<ol style="margin:6px 0 6px 20px;">$1</ol>')
+        .replace(/\n/g, '<br>');
+    }
+
+    function getTime() {
+      return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // ─── UI Functions ───
+    function addMessage(text, sender) {
+      const container = $('#messages');
+      const wrapper = document.createElement('div');
+      wrapper.className = `msg-wrapper ${sender}`;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'msg-avatar';
+      if (sender === 'bot') {
+        avatar.innerHTML = '<img src="ge-avatar.png" alt="Gê" onerror="this.parentElement.textContent=\'🤖\'">';
+      } else {
+        avatar.textContent = '👤';
+      }
+
+      const content = document.createElement('div');
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble';
+      bubble.innerHTML = renderMarkdown(text);
+
+      const time = document.createElement('div');
+      time.className = 'msg-time';
+      time.textContent = getTime();
+
+      content.appendChild(bubble);
+      content.appendChild(time);
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(content);
+      container.appendChild(wrapper);
+      container.scrollTop = container.scrollHeight;
+
+      // Salvar no histórico
+      saveToHistory({ text, sender, time: getTime() });
+      return wrapper;
+    }
+
+    function showTyping() {
+      const container = $('#messages');
+      const wrapper = document.createElement('div');
+      wrapper.className = 'msg-wrapper bot';
+      wrapper.id = 'typing-indicator';
+      const avatar = document.createElement('div');
+      avatar.className = 'msg-avatar';
+      avatar.innerHTML = '<img src="ge-avatar.png" alt="Gê" onerror="this.parentElement.textContent=\'🤖\'">';
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble';
+      bubble.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(bubble);
+      container.appendChild(wrapper);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function hideTyping() {
+      const el = $('#typing-indicator');
+      if (el) el.remove();
+    }
+
+    function setInputEnabled(enabled) {
+      $('#chat-input').disabled = !enabled;
+      $('#send-btn').disabled = !enabled;
+    }
+
+    // ─── History Management ───
+    function saveToHistory(message) {
+      try {
+        let history = JSON.parse(sessionStorage.getItem(CONFIG.historyKey) || '[]');
+        history.push(message);
+        if (history.length > CONFIG.maxHistory) {
+          history = history.slice(-CONFIG.maxHistory);
+        }
+        sessionStorage.setItem(CONFIG.historyKey, JSON.stringify(history));
+      } catch (e) {
+        // Silently fail if storage is full
+      }
+    }
+
+    function loadHistory() {
+      try {
+        const history = JSON.parse(sessionStorage.getItem(CONFIG.historyKey) || '[]');
+        const container = $('#messages');
+        container.innerHTML = '';
+        history.forEach(msg => {
+          const wrapper = document.createElement('div');
+          wrapper.className = `msg-wrapper ${msg.sender}`;
+          const avatar = document.createElement('div');
+          avatar.className = 'msg-avatar';
+          if (msg.sender === 'bot') {
+            avatar.innerHTML = '<img src="ge-avatar.png" alt="Gê" onerror="this.parentElement.textContent=\'🤖\'">';
+          } else {
+            avatar.textContent = '👤';
+          }
+          const content = document.createElement('div');
+          const bubble = document.createElement('div');
+          bubble.className = 'msg-bubble';
+          bubble.innerHTML = renderMarkdown(msg.text);
+          const time = document.createElement('div');
+          time.className = 'msg-time';
+          time.textContent = msg.time;
+          content.appendChild(bubble);
+          content.appendChild(time);
+          wrapper.appendChild(avatar);
+          wrapper.appendChild(content);
+          container.appendChild(wrapper);
+        });
+        container.scrollTop = container.scrollHeight;
+      } catch (e) {
+        // If history loading fails, start fresh
+      }
+    }
+
+    // ─── Secure API Communication ───
+    async function sendToSecureEndpoint(text) {
+      if (!isTokenValid()) {
+        await initializeSecureSession();
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), CONFIG.requestTimeout);
+
+      let lastError;
+      for (let attempt = 0; attempt < CONFIG.maxRetries; attempt++) {
+        try {
+          // Obter URL segura do token manager
+          const endpoint = SecureTokenManager.getSecureEndpoint();
+          
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Secure-Token': currentToken,
+              'X-Session-Id': sessionId,
+              'X-Request-Time': Date.now().toString(),
+            },
+            body: JSON.stringify({
+              chatInput: text,
+              sessionId: sessionId
+            }),
+            signal: controller.signal,
+            credentials: 'omit', // Não envia cookies para segurança
+          });
+
+          clearTimeout(timeout);
+
+          if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+          }
+
+          const rawText = await response.text();
+
+          // Tentar parsear JSON
+          try {
+            const data = JSON.parse(rawText);
+            if (typeof data === 'string') return data;
+            if (Array.isArray(data) && data.length > 0) {
+              const first = data[0];
+              return first.output || first.response || first.text || rawText;
+            }
+            return data.output || data.response || data.text || rawText;
+          } catch (e) {
+            return rawText;
+          }
+
+        } catch (error) {
+          lastError = error;
+          if (error.name === 'AbortError') {
+            clearTimeout(timeout);
+            return '⚠️ A resposta demorou muito. Por favor, tente novamente.';
+          }
+          // Aguarda antes de tentar novamente
+          if (attempt < CONFIG.maxRetries - 1) {
+            await new Promise(r => setTimeout(r, CONFIG.retryDelay * (attempt + 1)));
+          }
+        }
+      }
+
+      clearTimeout(timeout);
+      console.error('[GVC-Secure] Erro após tentativas:', lastError);
+      return '⚠️ Não foi possível conectar ao servidor. Tente novamente.';
+
+    }
+
+    // ─── Message Handler ───
+    async function sendMessage(text) {
+      if (!text || isWaiting) return;
+
+      clearError();
+      const input = $('#chat-input');
+      input.value = '';
+      setInputEnabled(false);
+
+      addMessage(text, 'user');
+      showTyping();
+      isWaiting = true;
+
+      const response = await sendToSecureEndpoint(text);
+      hideTyping();
+      isWaiting = false;
+      setInputEnabled(true);
+
+      if (response) {
+        addMessage(response, 'bot');
+      } else {
+        addMessage('Desculpe, não recebi uma resposta. Tente novamente.', 'bot');
+      }
+
+      input.focus();
+    }
+
+    // ─── Public Actions ───
+    function toggle() {
+      isOpen = !isOpen;
+      $('#chat-widget').classList.toggle('open', isOpen);
+      $('#chat-toggle').classList.toggle('active', isOpen);
+      if (isOpen) {
+        if ($('#messages').children.length === 0) {
+          // Carregar histórico se existir
+          loadHistory();
+          // Se não tiver histórico, mostrar boas-vindas
+          if ($('#messages').children.length === 0) {
+            addMessage(CONFIG.welcomeMessage, 'bot');
+          }
+        }
+        setTimeout(() => $('#chat-input')?.focus(), 300);
+      }
+    }
+
+    function reset() {
+      if (!confirm('Iniciar uma nova conversa? O histórico será apagado.')) return;
+      sessionStorage.removeItem(CONFIG.sessionKey);
+      sessionStorage.removeItem(CONFIG.historyKey);
+      sessionId = getSessionId();
+      $('#messages').innerHTML = '';
+      addMessage(CONFIG.welcomeMessage, 'bot');
+      clearError();
+    }
+
+    function send() {
+      const input = $('#chat-input');
+      const text = input.value.trim();
+      if (text) sendMessage(text);
+    }
+
+    // ─── Initialization ───
+    async function init() {
+      sessionId = getSessionId();
+      
+      // Esconder loader
+      const loader = $('#gvc-loader');
+      
+      // Tentar inicializar sessão segura
+      const sessionReady = await initializeSecureSession();
+      
+      // Mostrar widget (mesmo se session falhar, o UI funciona)
+      loader.classList.add('hidden');
+      
+      // Configurar event listeners
+      $('#chat-toggle').addEventListener('click', toggle);
+      $('#btn-minimize').addEventListener('click', toggle);
+      $('#btn-reset').addEventListener('click', reset);
+      $('#send-btn').addEventListener('click', send);
+      $('#chat-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) send();
+      });
+
+      // Prevenir que mensagens apareçam no código fonte ao inspecionar
+      Object.defineProperty(window, '__GVC_INITIALIZED__', { value: true });
+    }
+
+    // Iniciar quando DOM estiver pronto
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+    // Limpar dados sensíveis ao fechar/navegar fora
+    window.addEventListener('beforeunload', () => {
+      sessionStorage.removeItem(CONFIG.sessionKey);
+      sessionStorage.removeItem(CONFIG.historyKey);
+    });
+
+  })();
+  </script>
+
+</body>
+</html>

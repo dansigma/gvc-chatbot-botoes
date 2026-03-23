@@ -1,0 +1,111 @@
+<!--
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║  ChatGVC Secure Wrapper - Snippet de Integração                          ║
+  ║                                                                            ║
+  ║  Use este código para adicionar o chatbot seguro ao seu site.              ║
+  ║                                                                            ║
+  ║  VANTAGENS:                                                                ║
+  ║  ✓ Token de autenticação nunca exposto                                     ║
+  ║  ✓ Endpoint do chatbot oculto                                              ║
+  ║  ✓ Token expira automaticamente                                            ║
+  ║  ✓ Refresh automático                                                     ║
+  ║  ✓ Compatível com todos os navegadores modernos                           ║
+  ╚═══════════════════════════════════════════════════════════════════════════╝
+-->
+
+<!-- OPÇÃO 1: Embed via Iframe (RECOMENDADO) -->
+<!-- 
+  Esta é a forma mais segura - o wrapper é carregado em um contexto isolado
+  e nenhuma informação sensível é acessível ao site hospedeiro.
+-->
+<iframe
+  src="https://SEU-DOMINIO.com/secure-wrapper/chatgvc-secure-wrapper.html"
+  style="position: fixed; bottom: 0; right: 0; width: 420px; height: 650px; border: none; z-index: 9999; box-shadow: 0 8px 32px rgba(0,0,0,0.2);"
+  allow="clipboard-write"
+  title="Chat GVC - Assistente de Treinamento"
+  loading="lazy"
+></iframe>
+
+<!-- Para mobile, use esta versão: -->
+<!--
+<iframe
+  src="https://SEU-DOMINIO.com/secure-wrapper/chatgvc-secure-wrapper.html"
+  style="position: fixed; bottom: 0; left: 0; width: 100%; height: 100%; border: none; z-index: 9999;"
+  allow="clipboard-write"
+  title="Chat GVC - Assistente de Treinamento"
+  loading="lazy"
+></iframe>
+-->
+
+<!--
+  ═══════════════════════════════════════════════════════════════════════════
+  OPÇÃO 2: Script Embed (para sites que não suportam iframe)
+  ═══════════════════════════════════════════════════════════════════════════
+-->
+<!-- Descomente se preferir usar script em vez de iframe -->
+
+<!--
+<script>
+(function() {
+  'use strict';
+  
+  // ══════════════════════════════════════════════════════════════
+  // CONFIGURAÇÃO
+  // Altere apenas WRAPPER_URL para o caminho do seu wrapper
+  // ══════════════════════════════════════════════════════════════
+  
+  var WRAPPER_URL = 'https://SEU-DOMINIO.com/secure-wrapper/chatgvc-secure-wrapper.html';
+  
+  // ══════════════════════════════════════════════════════════════
+  // CÓDIGO (não precisa alterar)
+  // ══════════════════════════════════════════════════════════════
+  
+  // Criar container
+  var container = document.createElement('div');
+  container.id = 'gvc-secure-container';
+  container.style.cssText = 'position:fixed;bottom:0;right:0;width:420px;height:650px;z-index:9999;';
+  
+  // Criar iframe
+  var iframe = document.createElement('iframe');
+  iframe.src = WRAPPER_URL;
+  iframe.style.cssText = 'width:100%;height:100%;border:none;';
+  iframe.setAttribute('title', 'Chat GVC');
+  iframe.setAttribute('loading', 'lazy');
+  iframe.setAttribute('allow', 'clipboard-write');
+  
+  container.appendChild(iframe);
+  document.body.appendChild(container);
+  
+  // Responsivo para mobile
+  function handleResize() {
+    if (window.innerWidth <= 480) {
+      container.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;height:100%;z-index:9999;';
+    } else {
+      container.style.cssText = 'position:fixed;bottom:0;right:0;width:420px;height:650px;z-index:9999;';
+    }
+  }
+  
+  window.addEventListener('resize', handleResize);
+  handleResize();
+  
+})();
+</script>
+-->
+
+<!--
+  ═══════════════════════════════════════════════════════════════════════════
+  NOTAS DE SEGURANÇA
+  ═══════════════════════════════════════════════════════════════════════════
+  
+  1. O token de autenticação NUNCA aparece neste snippet
+  2. O endpoint do SigmaChat está oculto no wrapper
+  3. Todas as comunicações usam HTTPS
+  4. O wrapper implementa CORS para proteger contra ataques
+  5. Tokens expiram automaticamente após 5 minutos
+  6. Refresh de token é feito automaticamente
+  
+  Para maior segurança, hospede o wrapper em um subdomain separado
+  do seu site principal. Isso fornece isolamento adicional.
+  
+  ═══════════════════════════════════════════════════════════════════════════
+-->

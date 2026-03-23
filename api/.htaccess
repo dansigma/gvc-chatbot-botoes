@@ -1,0 +1,104 @@
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  ChatGVC - Security Configuration for API Endpoint                        ║
+# ║                                                                            ║
+# ║  Protege o endpoint de token contra acessos não autorizados                ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
+# Ativar mecanismo de reescrita
+RewriteEngine On
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SEGURANÇA GERAL
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Impedir acesso a arquivos sensíveis
+<FilesMatch "\.(env|log|md|sql|xml|yml|yaml|json)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Ocultar informações do servidor
+ServerSignature Off
+
+# Impedir directory listing
+Options -Indexes
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# HEADERS DE SEGURANÇA
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Prevenir XSS
+Header always set X-XSS-Protection "1; mode=block"
+Header always set X-Content-Type-Options "nosniff"
+Header always set X-Frame-Options "DENY"
+Header always set Referrer-Policy "no-referrer"
+
+# Content Security Policy (ajuste conforme necessário)
+# Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://script.hubchat.com.br; connect-src 'self' https://script.hubchat.com.br; img-src 'self' data:; style-src 'self' 'unsafe-inline'"
+
+# HSTS (requer HTTPS)
+# Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CORS (Configure conforme seu domínio)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Em produção, substitua pelo seu domínio
+SetEnvIf Origin "^https://(www\.)?(seu-dominio|localhost)(:\d+)?$" CORS_ALLOWED_ORIGIN=$0
+Header set Access-Control-Allow-Origin "%{CORS_ALLOWED_ORIGIN}e" env=CORS_ALLOWED_ORIGIN
+Header set Access-Control-Allow-Methods "POST, OPTIONS"
+Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Session-Id, X-Request-Time"
+Header set Access-Control-Max-Age "86400"
+Header set Access-Control-Allow-Credentials "true"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RATE LIMITING (Básico - para proteção mais forte use mod_dav ou fail2ban)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Limitar requisições por IP (exemplo básico)
+# Para produção, considere usar limitreqzone do mod_ratelimit
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# REGRAS DE REESCRITA
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Redirecionar OPTIONS para GET (para browsers que não enviam preflight corretamente)
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# Bloquear métodos HTTP não permitidos
+RewriteCond %{REQUEST_METHOD} !^(POST|OPTIONS)$
+RewriteRule ^ - [F]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHP CONFIGURATION (se usando PHP)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+<IfModule mod_php7.c>
+    # Desabilitar exposição de PHP
+    php_flag expose_php Off
+    
+    # Desabilitar register_globals (se ainda existir)
+    php_flag register_globals Off
+    
+    # Desabilitar allow_url_fopen para segurança
+    php_flag allow_url_fopen Off
+    
+    # Limitar tempo de execução
+    php_value max_execution_time 30
+    php_value max_input_time 30
+    php_value memory_limit 64M
+</IfModule>
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LOGGING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Log de acessos negados
+<IfModule mod_rewrite.c>
+    RewriteCond %{ENV:REDIRECT_STATUS} ^$
+    RewriteRule ^api/get-token\.php$ - [log=all, env=LOG_TOKEN_ACCESS:1]
+</IfModule>
+
+# ErrorLog warnings apenas para este diretório
+# CustomLog /var/log/apache2/chatgvc-token-access.log combined env=LOG_TOKEN_ACCESS

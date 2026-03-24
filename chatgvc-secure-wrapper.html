@@ -843,7 +843,7 @@
           showQuickReplies(subs, { showBack: true });
         } else {
           // Sem subtópicos, enviar diretamente
-          sendMessage(`Quero saber sobre ${item.label}`);
+          sendMessage(`Quero saber sobre ${item.label}`, true);
           showTopicButtonsAfterResponse();
         }
       } else if (parts.length === 2) {
@@ -856,7 +856,7 @@
         } else {
           // Sem assuntos, enviar diretamente
           const topicLabel = CATALOG.topics.find(t => t.code === parts[0])?.label || '';
-          sendMessage(`Quero saber sobre ${item.label} em ${topicLabel}`);
+          sendMessage(`Quero saber sobre ${item.label} em ${topicLabel}`, true);
           showTopicButtonsAfterResponse();
         }
       } else {
@@ -866,7 +866,7 @@
         navHistory.push({ level: 'subjects', code: subCode });
         const topicLabel = CATALOG.topics.find(t => t.code === topCode)?.label || '';
         const subLabel = CATALOG.subtopics[topCode]?.find(s => s.code === subCode)?.label || '';
-        sendMessage(`Quero saber sobre ${item.label} — ${subLabel} (${topicLabel})`);
+        sendMessage(`Quero saber sobre ${item.label} — ${subLabel} (${topicLabel})`, true);
         showTopicButtonsAfterResponse();
       }
     }
@@ -961,7 +961,7 @@
     }
 
     // ─── Secure API Communication ───
-    async function sendToSecureEndpoint(text) {
+    async function sendToSecureEndpoint(text, fromButton = false) {
       if (!isTokenValid()) {
         await initializeSecureSession();
       }
@@ -985,7 +985,8 @@
             },
             body: JSON.stringify({
               chatInput: text,
-              sessionId: sessionId
+              sessionId: sessionId,
+              button: fromButton
             }),
             signal: controller.signal,
             credentials: 'omit', // Não envia cookies para segurança
@@ -1032,7 +1033,7 @@
     }
 
     // ─── Message Handler ───
-    async function sendMessage(text) {
+    async function sendMessage(text, fromButton = false) {
       if (!text || isWaiting) return;
 
       clearError();
@@ -1044,7 +1045,7 @@
       showTyping();
       isWaiting = true;
 
-      const response = await sendToSecureEndpoint(text);
+      const response = await sendToSecureEndpoint(text, fromButton);
       hideTyping();
       isWaiting = false;
       setInputEnabled(true);

@@ -182,7 +182,8 @@ export async function onRequest(context) {
               },
               body: JSON.stringify({
                  chatInput: body.chatInput,
-                 sessionId: sessionId
+                 sessionId: sessionId,
+                 button: body.button || false
               })
            });
            

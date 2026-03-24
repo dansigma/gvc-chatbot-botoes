@@ -49,7 +49,7 @@
   // Em produção, o backend lida com isso. Estas são apenas para fallback.
   const ENCODED_FALLBACK = {
     // Endpoint SigmaChat (codificado em Base64)
-    endpoint: 'aHR0cHM6Ly93ZWJob29rZGlkYWN0aWNhLnNpZ21hbGFicy5jb20uYnIvd2ViaG9vay9ndmMtY2hhdGJvdA==',
+    endpoint: 'aHR0cHM6Ly93ZWJob29rbG9jYWwuc2lnbWFsYWJzLmNvbS5ici93ZWJob29rL2NoYXRib3QtdGVzdA==',
     
     // Token SigmaChat (codificado em Base64)
     authToken: 'd043nRZ5T2d4eHZONE9yTG8=',

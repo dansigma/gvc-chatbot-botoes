@@ -3,12 +3,7 @@
  * Atua como backend de segurança e proxy reverso para o webhook n8n
  */
 
-const DEFAULT_CONFIG = {
-  SIGMACHAT_TOKEN: 'wN7tZgOlxvN9OrLo',
-  SIGMACHAT_BASE_URL: 'https://webhooklocal.sigmalabs.com.br/webhook/chatbot-test',
-  BACKEND_AUTH_TOKEN: 'sua-chave-secreta-backend-mude-isso',
-  TOKEN_EXPIRY: 300 // 5 minutos em segundos
-};
+const DEFAULT_TOKEN_EXPIRY = 300; // 5 minutos em segundos
 
 // Funções criptográficas auxiliares (Web Crypto API)
 async function hmacSha256(data, secret) {
@@ -20,7 +15,7 @@ async function hmacSha256(data, secret) {
     false,
     ['sign']
   );
-  
+
   const signature = await crypto.subtle.sign('HMAC', key, enc.encode(data));
   const hexSignature = Array.from(new Uint8Array(signature))
     .map(b => b.toString(16).padStart(2, '0'))
@@ -37,7 +32,7 @@ function generateSecureId(length = 16) {
 async function generateSecureToken(sessionId, envConfig) {
   const now = Math.floor(Date.now() / 1000);
   const expiry = now + (parseInt(envConfig.TOKEN_EXPIRY) || 300);
-  
+
   const payload = {
     sid: sessionId,
     exp: expiry,
@@ -60,24 +55,39 @@ async function generateSecureToken(sessionId, envConfig) {
   };
 }
 
-async function refreshToken(oldToken, envConfig) {
+async function verifyToken(token, envConfig) {
   try {
-    const decoded = atob(oldToken);
+    const decoded = atob(token);
     const tokenData = JSON.parse(decoded);
-    
-    if (!tokenData || !tokenData.payload) return null;
 
+    if (!tokenData || !tokenData.payload) {
+      return { valid: false, reason: 'malformed' };
+    }
+
+    // Verificar expiração
+    const now = Math.floor(Date.now() / 1000);
+    if (tokenData.payload.exp < now) {
+      return { valid: false, reason: 'expired' };
+    }
+
+    // Verificar assinatura HMAC
     const dataToSign = JSON.stringify(tokenData.payload) + envConfig.SIGMACHAT_TOKEN;
     const expectedSignature = await hmacSha256(dataToSign, envConfig.BACKEND_AUTH_TOKEN);
 
     if (expectedSignature !== tokenData.signature) {
-      return null;
+      return { valid: false, reason: 'invalid_signature' };
     }
 
-    return await generateSecureToken(tokenData.payload.sid, envConfig);
+    return { valid: true, payload: tokenData.payload };
   } catch (e) {
-    return null;
+    return { valid: false, reason: 'corrupt' };
   }
+}
+
+async function refreshToken(oldToken, envConfig) {
+  const verification = await verifyToken(oldToken, envConfig);
+  if (!verification.valid) return null;
+  return await generateSecureToken(verification.payload.sid, envConfig);
 }
 
 function returnError(message, status = 400, corsHeaders = {}) {
@@ -90,18 +100,34 @@ function returnError(message, status = 400, corsHeaders = {}) {
 export async function onRequest(context) {
   const { request, env } = context;
 
-  // Montando a configuração final a partir do env ou valores default
+  // Montando a configuração final a partir do env (sem fallback para secrets)
   const envConfig = {
-    SIGMACHAT_TOKEN: env.SIGMACHAT_TOKEN || DEFAULT_CONFIG.SIGMACHAT_TOKEN,
-    SIGMACHAT_BASE_URL: env.SIGMACHAT_BASE_URL || DEFAULT_CONFIG.SIGMACHAT_BASE_URL,
-    BACKEND_AUTH_TOKEN: env.BACKEND_AUTH_TOKEN || DEFAULT_CONFIG.BACKEND_AUTH_TOKEN,
-    TOKEN_EXPIRY: env.TOKEN_EXPIRY || DEFAULT_CONFIG.TOKEN_EXPIRY
+    SIGMACHAT_TOKEN: env.SIGMACHAT_TOKEN,
+    SIGMACHAT_BASE_URL: env.SIGMACHAT_BASE_URL,
+    BACKEND_AUTH_TOKEN: env.BACKEND_AUTH_TOKEN,
+    TOKEN_EXPIRY: env.TOKEN_EXPIRY || DEFAULT_TOKEN_EXPIRY
   };
 
-  // Verificando e permitindo CORS
-  const origin = request.headers.get('Origin') || '*';
+  // Validar que todas as variáveis obrigatórias estão configuradas
+  if (!envConfig.SIGMACHAT_TOKEN || !envConfig.SIGMACHAT_BASE_URL || !envConfig.BACKEND_AUTH_TOKEN) {
+    return returnError('Server configuration incomplete', 500, {});
+  }
+
+  // Verificando e permitindo CORS com allowlist
+  const allowedOriginsRaw = env.ALLOWED_ORIGINS || '';
+  const allowedOrigins = allowedOriginsRaw.split(',').map(o => o.trim()).filter(Boolean);
+  const requestOrigin = request.headers.get('Origin') || '';
+
+  // Se ALLOWED_ORIGINS está configurado, validar origem
+  if (allowedOrigins.length > 0 && requestOrigin && !allowedOrigins.includes(requestOrigin)) {
+    return new Response(JSON.stringify({ error: true, message: 'Origin not allowed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const corsHeaders = {
-    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Origin': requestOrigin || (allowedOrigins.length > 0 ? allowedOrigins[0] : '*'),
     'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Session-Id, X-Request-Time, X-Secure-Token',
     'Access-Control-Max-Age': '86400',
@@ -119,7 +145,7 @@ export async function onRequest(context) {
   // Parse corpo da requisição e URL params
   let action = 'generate';
   let body = {};
-  
+
   if (request.method === 'POST') {
     try {
       body = await request.json();
@@ -128,7 +154,7 @@ export async function onRequest(context) {
       // Body vazio ou mal formado, continua
     }
   }
-  
+
   const url = new URL(request.url);
   if (url.searchParams.has('action')) {
     action = url.searchParams.get('action');
@@ -152,23 +178,20 @@ export async function onRequest(context) {
 
   try {
     switch (action) {
-      
+
       // ==========================================================
       // AÇÃO INJETADA PARA PROXY (n8n WEBHOOK)
       // ==========================================================
       case 'proxy_chat': {
-        // 1. Validar se o requesitante tem um token de segurança gerado por nós (e não expirado)
+        // 1. Validar token de segurança (expiração + assinatura HMAC)
         let token = request.headers.get('X-Secure-Token') || body.token || '';
-        try {
-          const decoded = atob(token);
-          const tokenData = JSON.parse(decoded);
-          const now = Math.floor(Date.now() / 1000);
-          
-          if (!tokenData || !tokenData.payload || tokenData.payload.exp < now) {
-            return returnError('Sessão expirada. Recarregue a página.', 401, responseHeaders);
-          }
-        } catch(e) {
-          return returnError('Acesso bloqueado. Solicitação corrompida.', 401, responseHeaders);
+        const verification = await verifyToken(token, envConfig);
+
+        if (!verification.valid) {
+          const msg = verification.reason === 'expired'
+            ? 'Sessão expirada. Recarregue a página.'
+            : 'Acesso não autorizado.';
+          return returnError(msg, 401, responseHeaders);
         }
 
         // 2. Se tudo estiver seguro, enviamos a mensagem para o verdadeiro n8n Webhook
@@ -186,7 +209,7 @@ export async function onRequest(context) {
                  button: body.button || false
               })
            });
-           
+
            const data = await proxyResponse.text();
            return new Response(data, {
                status: proxyResponse.status,
@@ -218,32 +241,20 @@ export async function onRequest(context) {
         }
       }
 
-      case 'script': {
-        // Rota apenas de legacy/referência
-        const scriptUrl = `${envConfig.SIGMACHAT_BASE_URL}?token=${encodeURIComponent(envConfig.SIGMACHAT_TOKEN)}&version=v1`;
-        return new Response(JSON.stringify({ scriptUrl }), { headers: responseHeaders });
-      }
-
       case 'validate': {
         let token = body.token || request.headers.get('Authorization') || '';
         token = token.replace('Bearer ', '');
-        
-        try {
-          const decoded = atob(token);
-          const tokenData = JSON.parse(decoded);
-          const now = Math.floor(Date.now() / 1000);
 
-          if (tokenData && tokenData.payload && tokenData.payload.exp) {
-            const isValid = tokenData.payload.exp > now;
-            return new Response(JSON.stringify({
-              valid: isValid,
-              expiresAt: tokenData.payload.exp,
-              timeRemaining: Math.max(0, tokenData.payload.exp - now)
-            }), { headers: responseHeaders });
-          } else {
-            return new Response(JSON.stringify({ valid: false }), { headers: responseHeaders });
-          }
-        } catch(e) {
+        const validationResult = await verifyToken(token, envConfig);
+
+        if (validationResult.valid) {
+          const now = Math.floor(Date.now() / 1000);
+          return new Response(JSON.stringify({
+            valid: true,
+            expiresAt: validationResult.payload.exp,
+            timeRemaining: Math.max(0, validationResult.payload.exp - now)
+          }), { headers: responseHeaders });
+        } else {
           return new Response(JSON.stringify({ valid: false }), { headers: responseHeaders });
         }
       }

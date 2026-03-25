@@ -6,8 +6,7 @@
  * ║  - Gerenciar tokens de autenticação de forma segura                       ║
  * ║  - O token real NUNCA aparece no código fonte ou nas ferramentas dev      ║
  * ║  - Implementa rotação e expiração automática de tokens                    ║
- * ║  - Usa codificação/obfuscação para proteger configurações                 ║
- * ║  - Suporta integração com backend PHP para segurança máxima               ║
+ * ║  - Integração com backend Cloudflare Pages Functions                      ║
  * ╚═══════════════════════════════════════════════════════════════════════════╝
  */
 
@@ -17,54 +16,44 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // CONFIGURAÇÃO
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const CONFIG = {
     // URL do backend (mude para seu domínio em produção)
     // Este é o endpoint seguro que faz a ponte com o SigmaChat
     backendUrl: '/api/get-token',
-    
-    // Se deve usar o backend para token (recomendado: true em produção)
-    useBackend: true, // Configurado como true para usar Cloudflare Pages Functions
-    
-    // Fallback client-side (usado se useBackend for false)
-    useClientFallback: true,
-    
+
+    // Deve usar o backend para token (obrigatório em produção)
+    useBackend: true,
+
+    // Fallback client-side (desativado — backend é obrigatório)
+    useClientFallback: false,
+
     // Tempo de expiração do token em segundos
     tokenExpiry: 300,
-    
+
     // Intervalo de refresh em milissegundos (deve ser menor que tokenExpiry)
     refreshInterval: 240000, // 4 minutos
-    
+
     // Número máximo de retries
     maxRetries: 3,
-    
+
     // Delay entre retries em ms
     retryDelay: 1000
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // CONFIGURAÇÕES CODIFICADAS (para fallback client-side)
+  // DADOS ESTÁTICOS (não-sensíveis)
   // ═══════════════════════════════════════════════════════════════════════════
-  
-  // Em produção, o backend lida com isso. Estas são apenas para fallback.
+
+  // Mensagem de boas-vindas codificada em UTF-8/Base64
   const ENCODED_FALLBACK = {
-    // Endpoint SigmaChat (codificado em Base64)
-    endpoint: 'aHR0cHM6Ly93ZWJob29rbG9jYWwuc2lnbWFsYWJzLmNvbS5ici93ZWJob29rL2NoYXRib3QtdGVzdA==',
-    
-    // Token SigmaChat (codificado em Base64)
-    authToken: 'd043nRZ5T2d4eHZONE9yTG8=',
-    
-    // Versão
-    version: 'djE=',
-    
-    // Mensagem de boas-vindas (codificada)
     welcomeMessage: '8J+RiyBPbMOhISBUZW0gYWxndW1hIGTDunZpZGEgc29icmUgcHJvY2VkaW1lbnRvcyBvdSBvcGVyYcOnw7VlcyBkYSBHVkM/IFBvZGUgcGVyZ3VudGFyIMOgIHZvbnRhZGUh'
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STATE
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   let state = {
     token: null,
     refreshToken: null,
@@ -110,18 +99,6 @@
   }
 
   /**
-   * Hash simples (não é criptografia, apenas para integridade)
-   */
-  function simpleHash(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash) + str.charCodeAt(i);
-      hash = hash & hash;
-    }
-    return Math.abs(hash).toString(16);
-  }
-
-  /**
    * Aguarda por um tempo especificado
    */
   function sleep(ms) {
@@ -145,7 +122,7 @@
    */
   async function fetchWithRetry(url, options, retries = CONFIG.maxRetries) {
     let lastError;
-    
+
     for (let i = 0; i < retries; i++) {
       try {
         const response = await fetch(url, {
@@ -153,11 +130,11 @@
           // Importante: não enviar cookies para não expor sessão
           credentials: 'omit'
         });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
-        
+
         return await response.json();
       } catch (error) {
         lastError = error;
@@ -166,7 +143,7 @@
         }
       }
     }
-    
+
     throw lastError;
   }
 
@@ -187,7 +164,7 @@
       },
       body: JSON.stringify({ action: 'generate' })
     });
-    
+
     return {
       token: response.token,
       expiresIn: response.expiresIn,
@@ -205,53 +182,16 @@
         'Content-Type': 'application/json',
         'X-Session-Id': getSessionId()
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         action: 'refresh',
         token: state.refreshToken || state.token
       })
     });
-    
+
     return {
       token: response.token,
       expiresIn: response.expiresIn,
       expiresAt: response.expiresAt
-    };
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CLIENT FALLBACK (Desenvolvimento)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /**
-   * Gera token client-side (fallback)
-   * NÃO USE EM PRODUÇÃO - apenas para desenvolvimento
-   */
-  function generateClientToken() {
-    const now = Date.now();
-    const sessionId = getSessionId();
-    
-    // Criar token estruturado (simula JWT-like structure)
-    const payload = {
-      v: 1,
-      sid: sessionId,
-      iat: Math.floor(now / 1000),
-      exp: Math.floor(now / 1000) + CONFIG.tokenExpiry,
-      jti: generateSecureId()
-    };
-    
-    // Assinatura simples (obfuscação, não segurança real)
-    const dataToSign = JSON.stringify(payload) + decodeBase64(ENCODED_FALLBACK.authToken);
-    const signature = simpleHash(dataToSign);
-    
-    const tokenData = {
-      payload: payload,
-      sig: signature
-    };
-    
-    return {
-      token: encodeBase64(JSON.stringify(tokenData)),
-      expiresIn: CONFIG.tokenExpiry,
-      expiresAt: now + (CONFIG.tokenExpiry * 1000)
     };
   }
 
@@ -270,10 +210,10 @@
       if (state.refreshTimer) {
         clearTimeout(state.refreshTimer);
       }
-      
+
       // Agendar refresh
       this.scheduleRefresh();
-      
+
       return this.getToken();
     },
 
@@ -282,7 +222,7 @@
      */
     async getToken() {
       const now = Date.now();
-      
+
       // Verificar se há token válido
       if (state.token && state.expiresAt > now + 30000) {
         return {
@@ -290,7 +230,7 @@
           expiresIn: Math.floor((state.expiresAt - now) / 1000)
         };
       }
-      
+
       // Se já está refresh, aguardar
       if (state.isRefreshing) {
         await new Promise(resolve => {
@@ -303,7 +243,7 @@
           };
           check();
         });
-        
+
         if (state.token) {
           return {
             token: state.token,
@@ -311,24 +251,22 @@
           };
         }
       }
-      
+
       // Gerar novo token
       state.isRefreshing = true;
-      
+
       try {
         let tokenData;
-        
+
         if (CONFIG.useBackend) {
           tokenData = await getTokenFromBackend();
-        } else if (CONFIG.useClientFallback) {
-          tokenData = generateClientToken();
         } else {
-          throw new Error('Nenhum método de token disponível');
+          throw new Error('Backend é obrigatório para geração de token');
         }
-        
+
         state.token = tokenData.token;
         state.expiresAt = tokenData.expiresAt || (Date.now() + tokenData.expiresIn * 1000);
-        
+
         return {
           token: state.token,
           expiresIn: tokenData.expiresIn
@@ -345,21 +283,21 @@
       if (state.isRefreshing) {
         return;
       }
-      
+
       state.isRefreshing = true;
-      
+
       try {
         let tokenData;
-        
+
         if (CONFIG.useBackend) {
           tokenData = await refreshTokenFromBackend();
         } else {
-          tokenData = generateClientToken();
+          throw new Error('Backend é obrigatório para refresh de token');
         }
-        
+
         state.token = tokenData.token;
         state.expiresAt = tokenData.expiresAt || (Date.now() + tokenData.expiresIn * 1000);
-        
+
         return {
           token: state.token,
           expiresIn: tokenData.expiresIn
@@ -380,13 +318,13 @@
       if (state.refreshTimer) {
         clearTimeout(state.refreshTimer);
       }
-      
+
       // Refresh antes de expirar (com margem de 30 segundos)
       const refreshTime = Math.max(
         CONFIG.refreshInterval,
         (state.expiresAt - Date.now() - 30000)
       );
-      
+
       state.refreshTimer = setTimeout(async () => {
         try {
           await this.refreshToken();
@@ -417,33 +355,7 @@
      * Obtém endpoint seguro
      */
     getSecureEndpoint() {
-      if (CONFIG.useBackend) {
-        return CONFIG.backendUrl;
-      }
-      
-      // Fallback: retorna URL codificada
-      const url = new URL(decodeBase64(ENCODED_FALLBACK.endpoint));
-      url.searchParams.set('_ts', Date.now().toString());
-      url.searchParams.set('_sid', getSessionId());
-      url.searchParams.set('_cv', generateSecureId(6));
-      
-      return url.toString();
-    },
-
-    /**
-     * Obtém URL do script SigmaChat
-     */
-    getSigmaChatScriptUrl() {
-      if (CONFIG.useBackend) {
-        return `${CONFIG.backendUrl}?action=script`;
-      }
-      
-      // Fallback client-side
-      const token = decodeBase64(ENCODED_FALLBACK.authToken);
-      const version = decodeBase64(ENCODED_FALLBACK.version);
-      const baseUrl = decodeBase64(ENCODED_FALLBACK.endpoint);
-      
-      return `${baseUrl}?token=${encodeURIComponent(token)}&version=${version}`;
+      return CONFIG.backendUrl;
     },
 
     /**
@@ -457,6 +369,7 @@
      * Limpa todos os dados
      */
     clear() {
+      const oldTimer = state.refreshTimer;
       state = {
         token: null,
         refreshToken: null,
@@ -465,9 +378,8 @@
         refreshTimer: null,
         lastError: null
       };
-      
-      if (state.refreshTimer) {
-        clearTimeout(state.refreshTimer);
+      if (oldTimer) {
+        clearTimeout(oldTimer);
       }
     },
 
@@ -494,12 +406,6 @@
       CONFIG.useBackend = true;
     },
 
-    /**
-     * Desabilita modo backend (usa fallback client-side)
-     */
-    disableBackend() {
-      CONFIG.useBackend = false;
-    }
   };
 
   // ═══════════════════════════════════════════════════════════════════════════

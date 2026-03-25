@@ -398,8 +398,6 @@
     let isOpen = false;
     let isWaiting = false;
     let sessionId = null;
-    let currentToken = null;
-    let tokenExpiresAt = 0;
 
     const $ = (sel) => document.querySelector(sel);
 
@@ -601,42 +599,13 @@
     // ─── Secure Token Management ───
     async function initializeSecureSession() {
       try {
-        const tokenData = await SecureTokenManager.getToken();
-        currentToken = tokenData.token;
-        tokenExpiresAt = Date.now() + (tokenData.expiresIn * 1000);
-        
-        // Agendar refresh do token
-        scheduleTokenRefresh();
-        
+        await SecureTokenManager.init();
         return true;
       } catch (error) {
         console.error('[GVC-Secure] Falha ao inicializar sessão:', error);
         showError('Não foi possível conectar ao assistente. Tente novamente.');
         return false;
       }
-    }
-
-    function scheduleTokenRefresh() {
-      // Refresh 30 segundos antes de expirar
-      const refreshTime = Math.max(tokenExpiresAt - Date.now() - 30000, 60000);
-      setTimeout(refreshToken, refreshTime);
-    }
-
-    async function refreshToken() {
-      try {
-        const tokenData = await SecureTokenManager.refreshToken(currentToken);
-        currentToken = tokenData.token;
-        tokenExpiresAt = Date.now() + (tokenData.expiresIn * 1000);
-        scheduleTokenRefresh();
-      } catch (error) {
-        console.error('[GVC-Secure] Falha ao renovaro token:', error);
-        // Não afeta a sessão atual, apenas agendar retry
-        setTimeout(refreshToken, CONFIG.retryDelay);
-      }
-    }
-
-    function isTokenValid() {
-      return currentToken && Date.now() < tokenExpiresAt - 10000;
     }
 
     // ─── Error Display ───
@@ -653,14 +622,31 @@
     }
 
     // ─── Markdown Parser ───
+    function sanitizeUrl(url) {
+      var cleaned = url.replace(/^\s+/, '').replace(/["'<>`]/g, '').replace(/javascript:/gi, '');
+      try {
+        var parsed = new URL(cleaned, window.location.origin);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+        return cleaned;
+      } catch (e) {
+        return '';
+      }
+    }
+
     function renderMarkdown(text) {
       if (!text) return '';
       return text
-        .replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
-        .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-        .replace(/(^|[^"=])(https?:\/\/\S+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>')
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, function(match, label, url) {
+          var safe = sanitizeUrl(url);
+          return safe ? '<a href="' + safe + '" target="_blank" rel="noopener noreferrer">' + label + '</a>' : label;
+        })
+        .replace(/(^|[^"=])(https?:\/\/\S+)/g, function(match, prefix, url) {
+          var safe = sanitizeUrl(url);
+          return safe ? prefix + '<a href="' + safe + '" target="_blank" rel="noopener noreferrer">' + safe + '</a>' : prefix + url;
+        })
         .replace(/^(\d+)[.)]\s+(.+)$/gm, '<li value="$1">$2</li>')
         .replace(/((?:<li.*?<\/li>\n?)+)/g, '<ol style="margin:6px 0 6px 20px;">$1</ol>')
         .replace(/\n/g, '<br>');
@@ -907,24 +893,28 @@
 
     // ─── Secure API Communication ───
     async function sendToSecureEndpoint(text, fromButton = false) {
-      if (!isTokenValid()) {
+      // Obter token válido via SecureTokenManager (ele cuida do refresh)
+      let tokenData;
+      try {
+        tokenData = await SecureTokenManager.getToken();
+      } catch (e) {
         await initializeSecureSession();
+        tokenData = await SecureTokenManager.getToken();
       }
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), CONFIG.requestTimeout);
 
       let lastError;
       for (let attempt = 0; attempt < CONFIG.maxRetries; attempt++) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), CONFIG.requestTimeout);
+
         try {
-          // Obter URL segura do token manager
           const endpoint = SecureTokenManager.getSecureEndpoint();
-          
+
           const response = await fetch(endpoint, {
             method: 'POST',
-            headers: { 
+            headers: {
               'Content-Type': 'application/json',
-              'X-Secure-Token': currentToken,
+              'X-Secure-Token': tokenData.token,
               'X-Session-Id': sessionId,
               'X-Request-Time': Date.now().toString(),
             },
@@ -934,7 +924,7 @@
               button: fromButton
             }),
             signal: controller.signal,
-            credentials: 'omit', // Não envia cookies para segurança
+            credentials: 'omit',
           });
 
           clearTimeout(timeout);
@@ -959,9 +949,9 @@
           }
 
         } catch (error) {
+          clearTimeout(timeout);
           lastError = error;
           if (error.name === 'AbortError') {
-            clearTimeout(timeout);
             return '⚠️ A resposta demorou muito. Por favor, tente novamente.';
           }
           // Aguarda antes de tentar novamente
@@ -971,7 +961,6 @@
         }
       }
 
-      clearTimeout(timeout);
       console.error('[GVC-Secure] Erro após tentativas:', lastError);
       return '⚠️ Não foi possível conectar ao servidor. Tente novamente.';
 
@@ -1072,12 +1061,6 @@
     } else {
       init();
     }
-
-    // Limpar dados sensíveis ao fechar/navegar fora
-    window.addEventListener('beforeunload', () => {
-      sessionStorage.removeItem(CONFIG.sessionKey);
-      sessionStorage.removeItem(CONFIG.historyKey);
-    });
 
   })();
   </script>

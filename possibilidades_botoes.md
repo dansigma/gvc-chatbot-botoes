@@ -9,61 +9,13 @@ Dependendo da profundidade da navegação, a mensagem enviada ao chatbot segue u
 
 ---
 
-## 1. Consórcios
+## 1. GVA
 
 | Tópico | Subtópico | Assunto | Mensagem enviada |
 |--------|-----------|---------|-----------------|
-| Consórcios | Consórcio de Veículos | Busca e Apreensão | Quero saber sobre Busca e Apreensão — Consórcio de Veículos (Consórcios) |
-| Consórcios | Consórcio de Veículos | Liquidação Antecipada | Quero saber sobre Liquidação Antecipada — Consórcio de Veículos (Consórcios) |
-| Consórcios | Consórcio de Veículos | Transferência de Cotas | Quero saber sobre Transferência de Cotas — Consórcio de Veículos (Consórcios) |
-| Consórcios | Consórcio de Veículos | Contemplação e Lances | Quero saber sobre Contemplação e Lances — Consórcio de Veículos (Consórcios) |
-| Consórcios | Consórcio de Veículos | Atraso e Negativação | Quero saber sobre Atraso e Negativação — Consórcio de Veículos (Consórcios) |
-| Consórcios | Consórcio de Imóveis | Entrega de Imóvel | Quero saber sobre Entrega de Imóvel — Consórcio de Imóveis (Consórcios) |
-| Consórcios | Consórcio de Imóveis | Liberação de Saque | Quero saber sobre Liberação de Saque — Consórcio de Imóveis (Consórcios) |
-| Consórcios | Consórcio de Imóveis | Portabilidade | Quero saber sobre Portabilidade — Consórcio de Imóveis (Consórcios) |
-| Consórcios | Consórcio de Serviços | *(sem assuntos)* | Quero saber sobre Consórcio de Serviços em Consórcios |
+| GVA | GVA | *(sem assuntos)* | Quero saber sobre GVA em GVA |
 
-## 2. Financiamentos
-
-| Tópico | Subtópico | Assunto | Mensagem enviada |
-|--------|-----------|---------|-----------------|
-| Financiamentos | Financiamento Veículos | Busca e Apreensão | Quero saber sobre Busca e Apreensão — Financiamento Veículos (Financiamentos) |
-| Financiamentos | Financiamento Veículos | Renegociação | Quero saber sobre Renegociação — Financiamento Veículos (Financiamentos) |
-| Financiamentos | Financiamento Veículos | Refinanciamento | Quero saber sobre Refinanciamento — Financiamento Veículos (Financiamentos) |
-| Financiamentos | Financiamento Veículos | Quitação | Quero saber sobre Quitação — Financiamento Veículos (Financiamentos) |
-| Financiamentos | Financiamento Imobiliário | *(sem assuntos)* | Quero saber sobre Financiamento Imobiliário em Financiamentos |
-| Financiamentos | CDC | *(sem assuntos)* | Quero saber sobre CDC em Financiamentos |
-
-## 3. Cartões e Serviços
-
-| Tópico | Subtópico | Assunto | Mensagem enviada |
-|--------|-----------|---------|-----------------|
-| Cartões e Serviços | Cartão de Crédito | Fatura e Pagamento | Quero saber sobre Fatura e Pagamento — Cartão de Crédito (Cartões e Serviços) |
-| Cartões e Serviços | Cartão de Crédito | Limite e Crédito | Quero saber sobre Limite e Crédito — Cartão de Crédito (Cartões e Serviços) |
-| Cartões e Serviços | Cartão de Crédito | Bloqueio e Segurança | Quero saber sobre Bloqueio e Segurança — Cartão de Crédito (Cartões e Serviços) |
-| Cartões e Serviços | Cartão de Crédito | International Services | Quero saber sobre International Services — Cartão de Crédito (Cartões e Serviços) |
-| Cartões e Serviços | Conta Digital | *(sem assuntos)* | Quero saber sobre Conta Digital em Cartões e Serviços |
-| Cartões e Serviços | Pix e Transferências | *(sem assuntos)* | Quero saber sobre Pix e Transferências em Cartões e Serviços |
-
-## 4. Seguros
-
-| Tópico | Subtópico | Assunto | Mensagem enviada |
-|--------|-----------|---------|-----------------|
-| Seguros | Seguro Auto | Abertura de Sinistro | Quero saber sobre Abertura de Sinistro — Seguro Auto (Seguros) |
-| Seguros | Seguro Auto | Consultar Sinistro | Quero saber sobre Consultar Sinistro — Seguro Auto (Seguros) |
-| Seguros | Seguro Auto | Assistência 24h | Quero saber sobre Assistência 24h — Seguro Auto (Seguros) |
-| Seguros | Seguro Auto | Renovação | Quero saber sobre Renovação — Seguro Auto (Seguros) |
-| Seguros | Seguro Residencial | *(sem assuntos)* | Quero saber sobre Seguro Residencial em Seguros |
-| Seguros | Seguro de Vida | *(sem assuntos)* | Quero saber sobre Seguro de Vida em Seguros |
-
-## 5. Capital de Giro
-
-| Tópico | Subtópico | Assunto | Mensagem enviada |
-|--------|-----------|---------|-----------------|
-| Capital de Giro | Crédito Produtivo | *(sem assuntos)* | Quero saber sobre Crédito Produtivo em Capital de Giro |
-| Capital de Giro | Antecipação de Recebíveis | *(sem assuntos)* | Quero saber sobre Antecipação de Recebíveis em Capital de Giro |
-
-## 6. Jurídico
+## 2. Jurídico
 
 | Tópico | Subtópico | Assunto | Mensagem enviada |
 |--------|-----------|---------|-----------------|
@@ -93,7 +45,7 @@ Dependendo da profundidade da navegação, a mensagem enviada ao chatbot segue u
 | Jurídico | Stellantis | SLA Jurídico | Quero saber sobre SLA Jurídico — Stellantis (Jurídico) |
 | Jurídico | Stellantis | Régua Jurídica | Quero saber sobre Régua Jurídica — Stellantis (Jurídico) |
 
-## 7. Operação
+## 3. Operação
 
 | Tópico | Subtópico | Assunto | Mensagem enviada |
 |--------|-----------|---------|-----------------|
@@ -151,7 +103,7 @@ Dependendo da profundidade da navegação, a mensagem enviada ao chatbot segue u
 | Operação | Retenção Rodobens | *(sem assuntos)* | Quero saber sobre Retenção Rodobens em Operação |
 | Operação | Volkswagen | *(sem assuntos)* | Quero saber sobre Volkswagen em Operação |
 
-## 8. RCV
+## 4. RCV
 
 | Tópico | Subtópico | Assunto | Mensagem enviada |
 |--------|-----------|---------|-----------------|
@@ -177,12 +129,8 @@ Dependendo da profundidade da navegação, a mensagem enviada ao chatbot segue u
 
 | Categoria | Combinações com 3 níveis | Combinações com 2 níveis | Total |
 |-----------|--------------------------|--------------------------|-------|
-| Consórcios | 8 | 1 | 9 |
-| Financiamentos | 4 | 2 | 6 |
-| Cartões e Serviços | 4 | 2 | 6 |
-| Seguros | 4 | 2 | 6 |
-| Capital de Giro | 0 | 2 | 2 |
+| GVA | 0 | 1 | 1 |
 | Jurídico | 24 | 1 | 25 |
 | Operação | 48 | 4 | 52 |
 | RCV | 2 | 13 | 15 |
-| **Total** | **94** | **27** | **121** |
+| **Total** | **74** | **19** | **93** |
